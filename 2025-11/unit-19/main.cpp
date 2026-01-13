@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <memory>
+#include <fstream>
 
 using namespace std;
 
@@ -30,17 +32,23 @@ enum class MenuAction {
 
 //-------------------
 class IProductStore {
+    int typeStorage; // 1 - List, 2 - Vector, 3 - FileCSV
 public:
+    IProductStore(int type) : typeStorage(type) {}
     virtual int AddProduct(const Product& product) = 0;
     virtual const std::vector<Product> GetProducts() const = 0;
     virtual ~IProductStore() = default; // {};
+
+    int GetTypeStorage() const {
+        return typeStorage;
+    }
 };
 
-class ProductStoreList : public IProductStore {
+class InMemoryProductStoreList : public IProductStore {
     std::list<Product> products;
 
 public:
-    ProductStoreList(){
+    InMemoryProductStoreList(): IProductStore(1) {
         std::cout << "Using List as storage type.\n";
     };
     int AddProduct(const Product& product) override {
@@ -52,37 +60,73 @@ public:
     }
 };
 
-class ProductStoreVector : public IProductStore {
+class InMemoryProductStore : public IProductStore {
     std::vector<Product> products;
 
 public:
-    ProductStoreVector(){
+    InMemoryProductStore() : IProductStore(2){
         std::cout << "Using Vector as storage type.\n";
     };
     int AddProduct(const Product& product) override{
         products.push_back(product);
         return products.size(); // Assuming 0 indicates success
     }
+    
     const std::vector<Product> GetProducts() const override {
         return std::vector<Product>(products.begin(), products.end());
     }
 };
 
-
-class ProductStoreVector2 : public IProductStore {
-    std::vector<Product> products;
-
+class FileCSVProductStore : public IProductStore {
+    std::string filename;
 public:
-    ProductStoreVector2(){
-        std::cout << "Using Vector as storage type.\n";
-    };
-    int AddProduct(const Product& product) override{
-        products.emplace_back(product);
-        return products.size(); // Assuming 0 indicates success
-
+    FileCSVProductStore(const std::string& file) : IProductStore(3), filename(file) {
+        std::cout << "Using File CSV as storage type. file: " << filename << "\n";
     }
-    const std::vector<Product> GetProducts() const {
-        return std::vector<Product>(products.begin(), products.end());
+
+    std::string GetFilename() const {
+        return filename;
+    }
+
+    int AddProduct(const Product& product) override {
+        std::ofstream file(GetFilename(), std::ios::app);
+
+        if (file.is_open()) {
+            file << product.GetName() << "," << product.GetPrice() << "\n";
+            file.close();
+            return 1; // Success
+        }
+        else{
+            std::cerr << "Error opening file for writing: " << GetFilename() << "\n";
+            return 0; // Failure
+        }
+    }
+
+    const std::vector<Product> GetProducts() const override {
+        std::cout << "Reading products from file: " << GetFilename() << "\n";
+        
+        std::ifstream file(GetFilename());
+        if(file.is_open()) {
+            std::vector<Product> products;
+
+            std::string line;
+
+            while (std::getline(file, line)) {
+                size_t commaPos = line.find(',');
+                if (commaPos != std::string::npos) {
+                    std::string name = line.substr(0, commaPos);
+                    int price = std::stoi(line.substr(commaPos + 1));
+                 
+                    products.emplace_back(name, price);
+                }
+            }
+            file.close();
+            return products;
+        } else {
+            std::cerr << "Error opening file for reading: " << GetFilename() << "\n";
+            
+            return {}; // return std::vector<Product>{}; // return std::vector<Product>();
+        }
     }
 };
 
@@ -92,18 +136,26 @@ void showMainMenu();
 Product addProduct();
 void showListProducts(const std::vector<Product>& products);
 
-int main() {
-    IProductStore* store = nullptr;
+std::unique_ptr<IProductStore> makeStore(int storageType) {
+    switch (storageType) {
+        case 1:
+            return std::make_unique<InMemoryProductStoreList>();
+        case 2:
+            return std::make_unique<InMemoryProductStore>();
+        case 3:
+            return std::make_unique<FileCSVProductStore>("products.csv");
+        default:
+            return std::make_unique<InMemoryProductStore>(); // Default to vector
+    }
+}
 
-    std::cout << "Select storage type:\n1. List\n2. Vector(Default)\nChoose an option: ";
+int main() {
+    
+    std::cout << "Select storage type:\n1. List\n2. Vector(Default)\n \n3. File CSV\nChoose an option: ";
     int storageChoice;
     std::cin >> storageChoice;
-
-    if (storageChoice == 1) {
-        store = new ProductStoreList();
-    } else {
-        store = new ProductStoreVector2();
-    }
+    
+    std::unique_ptr<IProductStore> store(makeStore(storageChoice));
 
     int choice;
 
@@ -136,8 +188,6 @@ int main() {
         }
 
     } while (static_cast<MenuAction>(choice) != MenuAction::Exit);
-
-    delete store;
 
     return 0;
 }
