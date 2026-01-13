@@ -104,7 +104,7 @@ public:
 
     const std::vector<Product> GetProducts() const override {
         std::cout << "Reading products from file: " << GetFilename() << "\n";
-        
+
         std::ifstream file(GetFilename());
         if(file.is_open()) {
             std::vector<Product> products;
@@ -149,13 +149,37 @@ std::unique_ptr<IProductStore> makeStore(int storageType) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     
-    std::cout << "Select storage type:\n1. List\n2. Vector(Default)\n \n3. File CSV\nChoose an option: ";
-    int storageChoice;
-    std::cin >> storageChoice;
-    
-    std::unique_ptr<IProductStore> store(makeStore(storageChoice));
+    std::clog << "Application started.\n";
+
+    std::clog << "argc: " << argc << "\n";
+    for (int i = 0; i < argc; ++i) {
+        std::clog << "argv[" << i << "]: " << argv[i] << "\n";
+    }
+
+    std::unique_ptr<IProductStore> store;
+
+    if(argc > 1) {
+        std::string storageArg = argv[1];
+        if(storageArg == "--type-file-csv")
+        {
+            std::clog << "Storage type set to File CSV via command line argument.\n";
+            store = makeStore(3);
+        }
+        else {
+            std::clog << "Unknown storage argument.\n Aplication will exit.\n";
+            std::exit(1);
+        }
+        std::clog << "Storage argument provided: " << storageArg << "\n";
+    } else {
+        std::cout << "Select storage type:\n1. List\n2. Vector(Default)\n \n3. File CSV\nChoose an option: ";
+        int storageChoice;
+        std::cin >> storageChoice;
+        
+        store = makeStore(storageChoice);
+    }
+
 
     int choice;
 
