@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 # Project Name Version & main Languages.
 project(lesson_3 VERSION 1.0.0 LANGUAGES CXX)
-
+set (CMAKE_CXX_STANDARD 23)
 
 add_executable(thread thread.cpp)
 add_executable(thread_value thread_value.cpp)

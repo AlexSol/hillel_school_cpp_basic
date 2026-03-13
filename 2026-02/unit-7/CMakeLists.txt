@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 # Project Name Version & main Languages.
 project(lesson_5 VERSION 1.0.0 LANGUAGES CXX)
+set (CMAKE_CXX_STANDARD 23)
+
 
 add_executable(call_once call_once.cpp)
 add_executable(call_once-exemple-2 call_once-exemple-2.cpp)
